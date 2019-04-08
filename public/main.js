@@ -1,14 +1,17 @@
-var socket = io();
+let socket = io();
 
-var RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
-var RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
+let RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
+let RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
 
-var configuration = { "iceServers": [{ "urls": "stun:stun.l.google.com:19302" }] };
+let configuration = { "iceServers": [{ "urls": "stun:stun.l.google.com:19302" }] };
 
-var pcPeers = {};
-var selfView = document.getElementById("selfView");
-var remoteViewContainer = document.getElementById("remoteViewContainer");
-var localStream;
+let pcPeers = {};
+
+let selfView = document.getElementById("selfView");
+let selfView2 = document.getElementById("selfView2");
+let remoteViewContainer = document.getElementById("remoteViewContainer");
+
+let localStream;
 let flag = false;
 
 function handleSuccess(stream) {
@@ -36,9 +39,9 @@ function getLocalStream() {
 function join(roomID) {
   socket.emit('join', roomID, function (socketIds) {
     console.log('join', socketIds);
-    for (var i in socketIds) {
+    for (let i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
-        var socketId = socketIds[i];
+        let socketId = socketIds[i];
         createPC(socketId, true);
       }
     }
@@ -46,7 +49,7 @@ function join(roomID) {
 }
 
 function createPC(socketId, isOffer) {
-  var pc = new RTCPeerConnection(configuration);
+  let pc = new RTCPeerConnection(configuration);
   pcPeers[socketId] = pc;
   
   pc.onicecandidate = function (event) {
@@ -85,21 +88,50 @@ function createPC(socketId, isOffer) {
   
   pc.ontrack = function (event) {
     console.log('onaddstream', event);
+  
+    let element = document.createElement('video');
     
-    var element = document.createElement('video');
-    
-    element.id = "remoteView" + socketId;
+    /*element.id = "remoteView" + socketId;
     element.autoplay = 'autoplay';
+    element.srcObject = event.streams[0];*/
+    
+    /*remoteViewContainer.appendChild(element);
+     event.streams.getTracks().forEach(track => pc.addTrack(track, event.streams));*/
+  
+  
+    /*selfView2.id = "remoteView" + socketId;
+     selfView2.autoplay = 'autoplay';
+     selfView2.srcObject = event.streams[0];*/
+  
+    //localStream = event;
+  
+    element.id = "remoteView" + socketId;
+    window.mediaStream = event.streams[0];
     element.srcObject = event.streams[0];
+    element.muted = true;
+    element.onloadedmetadata = () => {
+      element.play();
+    };
     
-    //remoteViewContainer.appendChild(element);
+    remoteViewContainer.appendChild(element);
     
-    //event.streams.getTracks().forEach(track => pc.addTrack(track, event.streams));
-    
-    if (flag === false) {
+    /*if (flag === false) {
       remoteViewContainer.appendChild(element);
+      
+      /!*selfView2.id = "remoteView" + socketId;
+      selfView2.autoplay = 'autoplay';
+      selfView2.srcObject = event.streams[0];*!/
+  
+      //localStream = event;
+      window.mediaStream = event.streams[0];
+      element.srcObject = event.streams[0];
+      element.muted = true;
+      element.onloadedmetadata = () => {
+        element.play();
+      };
+      
       flag = true;
-    }
+    }*/
   };
   
   pc.addStream(localStream);
