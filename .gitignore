@@ -1,0 +1,5 @@
+.DS_Store
+node_modules
+commit_images
+package-lock.json
+.idea
