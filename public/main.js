@@ -3,7 +3,10 @@ let socket = io();
 let RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
 let RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
 
-let configuration = { "iceServers": [{ "urls": "stun:stun.l.google.com:19302" }] };
+let configuration = {
+  iceServers: [{ "urls": "stun:stun.l.google.com:19302" }],
+  //sdpSemantics: 'unified-plan',
+};
 
 let pcPeers = {};
 
@@ -49,6 +52,7 @@ function join(roomID) {
 }
 
 function createPC(socketId, isOffer) {
+  
   let pc = new RTCPeerConnection(configuration);
   pcPeers[socketId] = pc;
   
@@ -88,23 +92,22 @@ function createPC(socketId, isOffer) {
   
   pc.ontrack = function (event) {
     console.log('onaddstream', event);
-  
+    
     let element = document.createElement('video');
     
     /*element.id = "remoteView" + socketId;
-    element.autoplay = 'autoplay';
-    element.srcObject = event.streams[0];*/
+     element.autoplay = 'autoplay';
+     element.srcObject = event.streams[0];*/
     
     /*remoteViewContainer.appendChild(element);
      event.streams.getTracks().forEach(track => pc.addTrack(track, event.streams));*/
-  
-  
+    
     /*selfView2.id = "remoteView" + socketId;
      selfView2.autoplay = 'autoplay';
      selfView2.srcObject = event.streams[0];*/
-  
+    
     //localStream = event;
-  
+    
     element.id = "remoteView" + socketId;
     window.mediaStream = event.streams[0];
     element.srcObject = event.streams[0];
@@ -116,22 +119,22 @@ function createPC(socketId, isOffer) {
     remoteViewContainer.appendChild(element);
     
     /*if (flag === false) {
-      remoteViewContainer.appendChild(element);
-      
-      /!*selfView2.id = "remoteView" + socketId;
-      selfView2.autoplay = 'autoplay';
-      selfView2.srcObject = event.streams[0];*!/
-  
-      //localStream = event;
-      window.mediaStream = event.streams[0];
-      element.srcObject = event.streams[0];
-      element.muted = true;
-      element.onloadedmetadata = () => {
-        element.play();
-      };
-      
-      flag = true;
-    }*/
+     remoteViewContainer.appendChild(element);
+     
+     /!*selfView2.id = "remoteView" + socketId;
+     selfView2.autoplay = 'autoplay';
+     selfView2.srcObject = event.streams[0];*!/
+     
+     //localStream = event;
+     window.mediaStream = event.streams[0];
+     element.srcObject = event.streams[0];
+     element.muted = true;
+     element.onloadedmetadata = () => {
+     element.play();
+     };
+     
+     flag = true;
+     }*/
   };
   
   pc.addStream(localStream);

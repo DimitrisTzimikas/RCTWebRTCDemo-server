@@ -1,23 +1,23 @@
-var express = require('express');
-var app = express();
-var fs = require('fs');
-var open = require('open');
-var options = {
+let express = require('express');
+let app = express();
+let fs = require('fs');
+let open = require('open');
+let options = {
   key: fs.readFileSync('./fake-keys/privatekey.pem'),
   cert: fs.readFileSync('./fake-keys/certificate.pem')
 };
-var serverPort = (process.env.PORT  || 4443);
-var https = require('https');
-var http = require('http');
-var server;
+let serverPort = (process.env.PORT  || 4443);
+let https = require('https');
+let http = require('http');
+let server;
 if (process.env.LOCAL) {
   server = https.createServer(options, app);
 } else {
   server = http.createServer(app);
 }
-var io = require('socket.io')(server);
+let io = require('socket.io')(server);
 
-var roomList = {};
+let roomList = {};
 
 //Middleware
 app.use(express.static(__dirname + '/public' ));
@@ -26,6 +26,7 @@ app.get('/', function(req, res){
   console.log('get /');
   res.sendFile(__dirname + '/index.html');
 });
+
 server.listen(serverPort, function(){
   console.log('server up and running at %s port', serverPort);
   if (process.env.LOCAL) {
@@ -34,10 +35,10 @@ server.listen(serverPort, function(){
 });
 
 function socketIdsInRoom(name) {
-  var socketIds = io.nsps['/'].adapter.rooms[name];
+  let socketIds = io.nsps['/'].adapter.rooms[name];
   if (socketIds) {
-    var collection = [];
-    for (var key in socketIds) {
+    let collection = [];
+    for (let key in socketIds) {
       collection.push(key);
     }
     return collection;
@@ -51,7 +52,7 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     console.log('disconnect');
     if (socket.room) {
-      var room = socket.room;
+      let room = socket.room;
       io.to(room).emit('leave', socket.id);
       socket.leave(room);
     }
@@ -59,7 +60,7 @@ io.on('connection', function(socket){
 
   socket.on('join', function(name, callback){
     console.log('join', name);
-    var socketIds = socketIdsInRoom(name);
+    let socketIds = socketIdsInRoom(name);
     callback(socketIds);
     socket.join(name);
     socket.room = name;
@@ -69,7 +70,7 @@ io.on('connection', function(socket){
   socket.on('exchange', function(data){
     console.log('exchange', data);
     data.from = socket.id;
-    var to = io.sockets.connected[data.to];
+    let to = io.sockets.connected[data.to];
     to.emit('exchange', data);
   });
 });
