@@ -1,4 +1,4 @@
-# react-native-webrtc-server
+# RCTWebRTCDemo-server
 
 ## Usage
 
