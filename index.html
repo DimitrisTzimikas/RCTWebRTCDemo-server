@@ -1,18 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>react-native-webrtc server</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 </head>
 <body>
-<div id="textRoom" style="display: none;">
-    <div id="textRoomContent">
-        <h3>Text Room</h3>
-    </div>
-    <input id="textRoomInput">
-    <button onclick="textRoomPress();">Send</button>
-</div>
 
 <video id="selfView" autoplay></video>
 
@@ -23,7 +16,7 @@
 <div id="remoteViewContainer"></div>
 
 <div id="roomIDContainer">
-    <input id="roomID" value="abc">
+    <label for="roomID"></label><input id="roomID" value="abc">
     <button onclick="press();">Join/Create room</button>
 </div>
 
