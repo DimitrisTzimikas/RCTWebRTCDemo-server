@@ -8,23 +8,19 @@ let configuration = { iceServers: [{ "urls": "stun:stun.l.google.com:19302" }] }
 let pcPeers = {};
 
 let selfView = document.getElementById("selfView");
-let selfView2 = document.getElementById("selfView2");
 let remoteViewContainer = document.getElementById("remoteViewContainer");
 
 let localStream;
-let flag = false;
-
-socket.on('exchange', data => {
-  exchange(data);
-});
-
-socket.on('leave', socketId => {
-  leave(socketId);
-});
 
 socket.on('connect', () => {
   console.log('connect');
   getLocalStream();
+});
+socket.on('exchange', data => {
+  exchange(data);
+});
+socket.on('leave', socketId => {
+  leave(socketId);
 });
 
 function getLocalStream() {
@@ -111,63 +107,38 @@ function createPC(socketId, isOffer) {
     console.log("on signaling state change", event.target.signalingState);
   };
   
-  peer.ontrack = function (event) {
+  peer.ontrack = event => {
     //console.log('onaddstream', event);
-    let element = document.createElement('video');
+    let video = document.createElement('video');
     
-    /*element.id = "remoteView" + socketId;
-     element.autoplay = 'autoplay';
-     element.srcObject = event.streams[0];*/
+    video.id = "remoteView" + socketId;
+    video.autoplay = 'autoplay';
     
-    /*remoteViewContainer.appendChild(element);
-     event.streams.getTracks().forEach(track => peer.addTrack(track, event.streams));*/
+    console.log(event.streams);
     
-    /*selfView2.id = "remoteView" + socketId;
-     selfView2.autoplay = 'autoplay';
-     selfView2.srcObject = event.streams[0];*/
-    
-    //localStream = event;
-    
-    element.id = "remoteView" + socketId;
-    element.autoplay = 'autoplay';
-    window.mediaStream = event.streams[0];
-    element.srcObject = event.streams[0];
-    element.muted = true;
-    element.onloadedmetadata = () => {
-      element.play();
+    video.srcObject = event.streams[0];
+    video.muted = true;
+    video.onloadedmetadata = () => {
+      video.play();
     };
     
-    remoteViewContainer.appendChild(element);
-    
-    /*if (flag === false) {
-     remoteViewContainer.appendChild(element);
-     
-     /!*selfView2.id = "remoteView" + socketId;
-     selfView2.autoplay = 'autoplay';
-     selfView2.srcObject = event.streams[0];*!/
-     
-     //localStream = event;
-     window.mediaStream = event.streams[0];
-     element.srcObject = event.streams[0];
-     element.muted = true;
-     element.onloadedmetadata = () => {
-     element.play();
-     };
-     
-     flag = true;
-     }*/
+    remoteViewContainer.appendChild(video);
   };
   
   function createOffer() {
     let callback = desc => {
-      //console.log('createOffer', desc);
-      peer.setLocalDescription(desc, callback2, logError);
+      console.log('createOffer', desc);
+      peer.setLocalDescription(desc)
+        .then(callback2)
+        .catch(logError);
     };
     let callback2 = () => {
-      //console.log('setLocalDescription', peer.localDescription);
+      console.log('setLocalDescription', peer.localDescription);
       socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
     };
-    peer.createOffer(callback, logError);
+    peer.createOffer()
+      .then(callback)
+      .catch(logError);
   }
   
   return peer;
@@ -175,41 +146,49 @@ function createPC(socketId, isOffer) {
 
 function exchange(data) {
   let fromId = data.from;
-  let pc;
+  let peer;
   if (fromId in pcPeers) {
-    pc = pcPeers[fromId];
+    peer = pcPeers[fromId];
   } else {
-    pc = createPC(fromId, false);
+    peer = createPC(fromId, false);
   }
   
   if (data.sdp) {
-    console.log('exchange sdp', data);
-    pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
-      if (pc.remoteDescription.type === "offer") {
-        pc.createAnswer(function (desc) {
-          console.log('createAnswer', desc);
-          pc.setLocalDescription(desc, function () {
-            console.log('setLocalDescription', pc.localDescription);
-            socket.emit('exchange', { 'to': fromId, 'sdp': pc.localDescription });
-          }, logError);
-        }, logError);
-      }
-    }, logError);
+    //console.log('exchange sdp', data);
+    let sdp = new RTCSessionDescription(data.sdp);
+    
+    let callback = () => peer.remoteDescription.type === "offer" ? peer.createAnswer.then(callback2).catch(logError) : null;
+    let callback2 = desc => peer.setLocalDescription(desc).then(callback3).catch(logError);
+    let callback3 = () => socket.emit('exchange', { 'to': fromId, 'sdp': peer.localDescription });
+    
+    peer.setRemoteDescription(sdp)
+      .then(callback)
+      .catch(logError);
   } else {
-    console.log('exchange candidate', data);
-    pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    //console.log('exchange candidate', data);
+    peer.addIceCandidate(new RTCIceCandidate(data.candidate))
+      .catch(logError);
   }
 }
 
 function leave(socketId) {
   console.log('leave', socketId);
-  let pc = pcPeers[socketId];
-  pc.close();
+  
+  const peer = pcPeers[socketId];
+  
+  peer.close();
+  
   delete pcPeers[socketId];
+  
   let video = document.getElementById("remoteView" + socketId);
+  
   if (video) video.remove();
 }
 
 function logError(error) {
-  console.log("logError", error);
+  console.log('\n\n-------------------');
+  console.log("Log Error:", error);
+  console.log(error.toString());
+  console.trace();
+  console.log('-------------------\n\n');
 }

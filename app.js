@@ -4,9 +4,9 @@ let fs = require('fs');
 let open = require('open');
 let options = {
   key: fs.readFileSync('./fake-keys/privatekey.pem'),
-  cert: fs.readFileSync('./fake-keys/certificate.pem')
+  cert: fs.readFileSync('./fake-keys/certificate.pem'),
 };
-let serverPort = (process.env.PORT  || 4443);
+let serverPort = (process.env.PORT || 4443);
 let https = require('https');
 let http = require('http');
 let server;
@@ -22,17 +22,17 @@ let io = require('socket.io')(server);
 let roomList = {};
 
 //Middleware
-app.use(express.static(__dirname + '/public' ));
+app.use(express.static(__dirname + '/public'));
 
-app.get('/', function(req, res){
+app.get('/', function (req, res) {
   console.log('get /');
   res.sendFile(__dirname + '/index.html');
 });
 
-server.listen(serverPort, function(){
+server.listen(serverPort, function () {
   console.log('server up and running at %s port', serverPort);
   if (process.env.LOCAL) {
-    open('https://localhost:' + serverPort)
+    open('https://localhost:' + serverPort);
   }
 });
 
@@ -49,9 +49,9 @@ function socketIdsInRoom(name) {
   }
 }
 
-io.on('connection', function(socket){
+io.on('connection', function (socket) {
   console.log('connection');
-  socket.on('disconnect', function(){
+  socket.on('disconnect', function () {
     console.log('disconnect');
     if (socket.room) {
       let room = socket.room;
@@ -59,17 +59,16 @@ io.on('connection', function(socket){
       socket.leave(room);
     }
   });
-
-  socket.on('join', function(name, callback){
+  
+  socket.on('join', function (name, callback) {
     console.log('join', name);
     let socketIds = socketIdsInRoom(name);
     callback(socketIds);
     socket.join(name);
     socket.room = name;
   });
-
-
-  socket.on('exchange', function(data){
+  
+  socket.on('exchange', function (data) {
     console.log('exchange', data);
     data.from = socket.id;
     let to = io.sockets.connected[data.to];
