@@ -10,11 +10,13 @@ let serverPort = (process.env.PORT  || 4443);
 let https = require('https');
 let http = require('http');
 let server;
+
 if (process.env.LOCAL) {
   server = https.createServer(options, app);
 } else {
   server = http.createServer(app);
 }
+
 let io = require('socket.io')(server);
 
 let roomList = {};
