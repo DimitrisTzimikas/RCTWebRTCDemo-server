@@ -1,15 +1,11 @@
-let socket = io();
-
-let RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
-let RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
-
-let configuration = { iceServers: [{ "urls": "stun:stun.l.google.com:19302" }] };
-
+const socket = io();
+const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
+const RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
+const configuration = { iceServers: [{ "urls": "stun:stun.l.google.com:19302" }] };
+//const configuration = {sdpSemantics: 'unified-plan'};
+const selfView = document.getElementById("selfView");
+const remoteViewContainer = document.getElementById("remoteViewContainer");
 let pcPeers = {};
-
-let selfView = document.getElementById("selfView");
-let remoteViewContainer = document.getElementById("remoteViewContainer");
-
 let localStream;
 
 socket.on('connect', () => {
