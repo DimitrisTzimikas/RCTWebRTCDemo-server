@@ -157,7 +157,7 @@ function exchange(data) {
     //console.log('exchange sdp', data);
     let sdp = new RTCSessionDescription(data.sdp);
     
-    let callback = () => peer.remoteDescription.type === "offer" ? peer.createAnswer.then(callback2).catch(logError) : null;
+    let callback = () => peer.remoteDescription.type === "offer" ? peer.createAnswer().then(callback2).catch(logError) : null;
     let callback2 = desc => peer.setLocalDescription(desc).then(callback3).catch(logError);
     let callback3 = () => socket.emit('exchange', { 'to': fromId, 'sdp': peer.localDescription });
     
