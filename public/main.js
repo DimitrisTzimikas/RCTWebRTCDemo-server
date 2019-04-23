@@ -40,14 +40,23 @@ function getLocalStream() {
         logError(error);
       }
     };
+    
+    if (navigator.userAgent.search("Firefox") === -1) {
+      log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
+    }
+    log('Array with tracks', localStream.getTracks(), 'table');
   };
   
-  //window.RTCRtpSender.getCapabilities("video").codecs.map(e=>e.name).indexOf("H264")
+  /*console.log(window.RTCRtpSender.getCapabilities("video").codecs.map(e => e.name).indexOf("H264"));
+   console.log(window.RTCRtpSender.getCapabilities("video"));
+   console.log(window.RTCRtpSender.getCapabilities("audio"));*/
   
   /*navigator.mediaDevices.getUserMedia = ( navigator.mediaDevices.getUserMedia ||
    navigator.webkitGetUserMedia ||
    navigator.mozGetUserMedia ||
    navigator.msGetUserMedia);*/
+  
+  //navigator.mediaDevices.enumerateDevices().then(console.table);
   
   navigator.mediaDevices.getUserMedia(constrains)
     .then(callback)
@@ -70,8 +79,8 @@ function press() {
 function join(roomID) {
   
   let onJoin = socketIds => {
-    //log('join');
-    //console.log(socketIds);
+    
+    //log('join', socketIds, 'table');
     
     for (const i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
@@ -89,7 +98,7 @@ function createPC(socketId, isOffer) {
   
   let peer = new RTCPeerConnection(configuration);
   
-  console.log(peer);
+  //log('Peer', peer, 'table');
   
   pcPeers = {
     ...pcPeers,
@@ -97,8 +106,7 @@ function createPC(socketId, isOffer) {
   };
   
   peer.onicecandidate = event => {
-    //log('on ice candidate');
-    //console.log(event);
+    //log('On Ice Candidate', event, 'table');
     
     if (event.candidate) {
       socket.emit('exchange', { 'to': socketId, 'candidate': event.candidate });
@@ -122,8 +130,7 @@ function createPC(socketId, isOffer) {
   };
   
   peer.oniceconnectionstatechange = event => {
-    //log('on ice connection state change');
-    //console.log(event);
+    //log('on ice connection state change', event);
     
     if (peer.iceConnectionState === 'connected') {
       //log('peer.iceConnectionState === "connected"');
@@ -133,18 +140,14 @@ function createPC(socketId, isOffer) {
     }
   };
   peer.onsignalingstatechange = event => {
-    //log('On signaling state change');
-    //console.log(event);
+    //log('On signaling state change', event);
     //console.log(peer.signalingState);
   };
   
   //peer.addStream(localStream);
-  
   for (const track of localStream.getTracks()) {
-   console.log(track);
-   console.log(localStream);
-   peer.addTrack(track, localStream);
-   }
+    peer.addTrack(track, localStream);
+  }
   
   peer.ontrack = event => {
     //console.log('onaddstream', event);
@@ -170,14 +173,18 @@ function createPC(socketId, isOffer) {
   
   function createOffer() {
     let callback = desc => {
-      //console.log('createOffer', desc);
+      
+      log('The SDP offer', desc.sdp, 'table');
+      
       peer.setLocalDescription(desc)
         .then(callback2)
         .catch(logError);
     };
     let callback2 = () => {
-      //console.log('setLocalDescription', peer.localDescription);
-      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
+      
+      //log('setLocalDescription', peer.localDescription, 'table');
+      
+      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription.sdp });
     };
     peer.createOffer()
       .then(callback)
@@ -229,13 +236,26 @@ function leave(socketId) {
 }
 
 function logError(error) {
-  console.log('\n\n%c START ________________________ Log Error ______________________', ' color: red; font-size: 20px');
+  console.log('\n\n%c START ________________________ Log Error ______________________', ' color: red; font-size: 15px');
   //console.log(error + '\n\n');
   console.log(error.toString() + '\n\n');
   console.trace();
-  console.log('%c END __________________________ Log Error ______________________\n\n', 'color: red; font-size: 20px');
+  console.log('%c END __________________________ Log Error ______________________\n\n', 'color: red; font-size: 15px');
 }
 
-function log(log) {
-  console.log('\n\n%c ______________________ ' + log + ' ______________________', 'font-size: 20px');
+function log(log, value, type) {
+  let count = 60;
+  let i = 0;
+  let str = '';
+  let z = count - log.length;
+  
+  for (i; i <= z; i++) {
+    str += '_';
+    if (i === Math.floor(z / 2)) {
+      str += log;
+    }
+  }
+  console.log('%c' + str, 'font-size: 15px');
+  value !== undefined ? (type === 'table' ? console.table(value) : console.log(value)) : null;
+  console.log('\n\n');
 }
