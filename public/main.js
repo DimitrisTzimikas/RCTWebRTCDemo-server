@@ -25,7 +25,7 @@ socket.on('leave', socketId => {
 
 function getLocalStream() {
   const constrains = {
-    "audio": true,
+    "audio": false,
     "video": true,
   };
   const callback = stream => {
@@ -42,9 +42,9 @@ function getLocalStream() {
     };
     
     if (navigator.userAgent.search("Firefox") === -1) {
-      log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
+      //log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
     }
-    log('Array with tracks', localStream.getTracks(), 'table');
+    //log('Array with tracks', localStream.getTracks(), 'table');
   };
   
   /*console.log(window.RTCRtpSender.getCapabilities("video").codecs.map(e => e.name).indexOf("H264"));
@@ -174,7 +174,7 @@ function createPC(socketId, isOffer) {
   function createOffer() {
     let callback = desc => {
       
-      log('The SDP offer', desc.sdp, 'table');
+      log('The SDP offer', desc.sdp);
       
       peer.setLocalDescription(desc)
         .then(callback2)
@@ -184,7 +184,7 @@ function createPC(socketId, isOffer) {
       
       //log('setLocalDescription', peer.localDescription, 'table');
       
-      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription.sdp });
+      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
     };
     peer.createOffer()
       .then(callback)
@@ -196,6 +196,9 @@ function createPC(socketId, isOffer) {
 
 function exchange(data) {
   let fromId = data.from;
+  
+  if (data.sdp) log('Exchange', data);
+  
   let peer;
   if (fromId in pcPeers) {
     peer = pcPeers[fromId];
