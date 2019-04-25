@@ -63,7 +63,7 @@ function getLocalStream() {
     .catch(logError);
 }
 
-function press() {
+function onPress() {
   let roomID = document.getElementById('roomID').value;
   
   if (roomID === "") {
@@ -77,15 +77,11 @@ function press() {
 }
 
 function join(roomID) {
-  
   let onJoin = socketIds => {
-    
     //log('join', socketIds, 'table');
-    
     for (const i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
         const socketId = socketIds[i];
-        
         createPC(socketId, true);
       }
     }
@@ -99,6 +95,8 @@ function createPC(socketId, isOffer) {
   let peer = new RTCPeerConnection(configuration);
   
   //log('Peer', peer, 'table');
+  
+  log('Peer', peer);
   
   pcPeers = {
     ...pcPeers,
