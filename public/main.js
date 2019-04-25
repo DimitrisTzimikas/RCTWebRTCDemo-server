@@ -1,251 +1,262 @@
-let socket = io();
+const socket = io();
+const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
+const RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
+const configuration = { iceServers: [{ urls: "stun:stun.1.google.com:19302" }] };
+//const configuration = {sdpSemantics: 'unified-plan'};
 
-let RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
-let RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
-
-let configuration = {
-  iceServers: [{ "urls": "stun:stun.l.google.com:19302" }],
-  //sdpSemantics: 'unified-plan',
-};
+const selfView = document.getElementById("selfView");
+const remoteViewContainer = document.getElementById("remoteViewContainer");
 
 let pcPeers = {};
-
-let selfView = document.getElementById("selfView");
-let selfView2 = document.getElementById("selfView2");
-let remoteViewContainer = document.getElementById("remoteViewContainer");
-
 let localStream;
-let flag = false;
 
-function handleSuccess(stream) {
-  localStream = stream;
-  window.mediaStream = stream;
-  selfView.srcObject = stream;
-  selfView.muted = true;
-  selfView.onloadedmetadata = () => {
-    selfView.play();
-  };
-}
-
-function handleError(error) {
-  logError(error);
-}
+socket.on('connect', () => {
+  //log('socket connected');
+  getLocalStream();
+});
+socket.on('exchange', data => {
+  //log('socket exchange data');
+  exchange(data);
+});
+socket.on('leave', socketId => {
+  //log('socket left');
+  leave(socketId);
+});
 
 function getLocalStream() {
-  const constrains = { "audio": true, "video": true };
+  const constrains = {
+    "audio": false,
+    "video": true,
+  };
+  const callback = stream => {
+    localStream = stream;
+    //window.mediaStream = stream;
+    selfView.srcObject = stream;
+    selfView.muted = true;
+    selfView.onloadedmetadata = async () => {
+      try {
+        await selfView.play();
+      } catch (error) {
+        logError(error);
+      }
+    };
+    
+    if (navigator.userAgent.search("Firefox") === -1) {
+      //log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
+    }
+    //log('Array with tracks', localStream.getTracks(), 'table');
+  };
+  
+  /*console.log(window.RTCRtpSender.getCapabilities("video").codecs.map(e => e.name).indexOf("H264"));
+   console.log(window.RTCRtpSender.getCapabilities("video"));
+   console.log(window.RTCRtpSender.getCapabilities("audio"));*/
+  
+  /*navigator.mediaDevices.getUserMedia = ( navigator.mediaDevices.getUserMedia ||
+   navigator.webkitGetUserMedia ||
+   navigator.mozGetUserMedia ||
+   navigator.msGetUserMedia);*/
+  
+  //navigator.mediaDevices.enumerateDevices().then(console.table);
   
   navigator.mediaDevices.getUserMedia(constrains)
-    .then(handleSuccess)
-    .catch(handleError);
+    .then(callback)
+    .catch(logError);
+}
+
+function onPress() {
+  let roomID = document.getElementById('roomID').value;
+  
+  if (roomID === "") {
+    alert('Please enter room ID');
+  } else {
+    let roomIDContainer = document.getElementById('roomIDContainer');
+    roomIDContainer.parentElement.removeChild(roomIDContainer);
+    
+    join(roomID);
+  }
 }
 
 function join(roomID) {
-  socket.emit('join', roomID, function (socketIds) {
-    console.log('join', socketIds);
-    for (let i in socketIds) {
+  let onJoin = socketIds => {
+    //log('join', socketIds, 'table');
+    for (const i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
-        let socketId = socketIds[i];
+        const socketId = socketIds[i];
         createPC(socketId, true);
       }
     }
-  });
+  };
+  
+  socket.emit('join', roomID, onJoin);
 }
 
 function createPC(socketId, isOffer) {
   
-  let pc = new RTCPeerConnection(configuration);
-  pcPeers[socketId] = pc;
+  let peer = new RTCPeerConnection(configuration);
   
-  pc.onicecandidate = function (event) {
-    console.log('onicecandidate', event);
+  //log('Peer', peer, 'table');
+  
+  log('Peer', peer);
+  
+  pcPeers = {
+    ...pcPeers,
+    [socketId]: peer,
+  };
+  
+  peer.onicecandidate = event => {
+    //log('On Ice Candidate', event, 'table');
+    
     if (event.candidate) {
       socket.emit('exchange', { 'to': socketId, 'candidate': event.candidate });
     }
   };
   
-  function createOffer() {
-    pc.createOffer(function (desc) {
-      console.log('createOffer', desc);
-      pc.setLocalDescription(desc, function () {
-        console.log('setLocalDescription', pc.localDescription);
-        socket.emit('exchange', { 'to': socketId, 'sdp': pc.localDescription });
-      }, logError);
-    }, logError);
-  }
-  
-  pc.onnegotiationneeded = function () {
-    console.log('onnegotiationneeded');
+  peer.onnegotiationneeded = () => {
+    //log('on negotiation needed');
+    
+    /*peer.createOffer()
+     .then(function (offer) {
+     peer.setLocalDescription(offer)
+     .then(() => socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription }))
+     .catch(logError);
+     })
+     .catch(logError);*/
+    
     if (isOffer) {
       createOffer();
     }
   };
   
-  pc.oniceconnectionstatechange = function (event) {
-    console.log('oniceconnectionstatechange', event);
-    if (event.target.iceConnectionState === 'connected') {
-      createDataChannel();
+  peer.oniceconnectionstatechange = event => {
+    //log('on ice connection state change', event);
+    
+    if (peer.iceConnectionState === 'connected') {
+      //log('peer.iceConnectionState === "connected"');
+    }
+    if (peer.iceConnectionState === "connected") {
+      //log('peer.iceConnectionState === "connected"');
     }
   };
-  pc.onsignalingstatechange = function (event) {
-    console.log('onsignalingstatechange', event);
+  peer.onsignalingstatechange = event => {
+    //log('On signaling state change', event);
+    //console.log(peer.signalingState);
   };
   
-  pc.ontrack = function (event) {
-    console.log('onaddstream', event);
-    
-    let element = document.createElement('video');
-    
-    /*element.id = "remoteView" + socketId;
-     element.autoplay = 'autoplay';
-     element.srcObject = event.streams[0];*/
-    
-    /*remoteViewContainer.appendChild(element);
-     event.streams.getTracks().forEach(track => pc.addTrack(track, event.streams));*/
-    
-    /*selfView2.id = "remoteView" + socketId;
-     selfView2.autoplay = 'autoplay';
-     selfView2.srcObject = event.streams[0];*/
-    
-    //localStream = event;
-    
-    element.id = "remoteView" + socketId;
-    window.mediaStream = event.streams[0];
-    element.srcObject = event.streams[0];
-    element.muted = true;
-    element.onloadedmetadata = () => {
-      element.play();
-    };
-    
-    remoteViewContainer.appendChild(element);
-    
-    /*if (flag === false) {
-     remoteViewContainer.appendChild(element);
-     
-     /!*selfView2.id = "remoteView" + socketId;
-     selfView2.autoplay = 'autoplay';
-     selfView2.srcObject = event.streams[0];*!/
-     
-     //localStream = event;
-     window.mediaStream = event.streams[0];
-     element.srcObject = event.streams[0];
-     element.muted = true;
-     element.onloadedmetadata = () => {
-     element.play();
-     };
-     
-     flag = true;
-     }*/
-  };
-  
-  pc.addStream(localStream);
-  
-  function createDataChannel() {
-    if (pc.textDataChannel) {
-      return;
-    }
-    var dataChannel = pc.createDataChannel("text");
-    
-    dataChannel.onerror = function (error) {
-      console.log("dataChannel.onerror", error);
-    };
-    
-    dataChannel.onmessage = function (event) {
-      console.log("dataChannel.onmessage:", event.data);
-      var content = document.getElementById('textRoomContent');
-      content.innerHTML = content.innerHTML + '<p>' + socketId + ': ' + event.data + '</p>';
-    };
-    
-    dataChannel.onopen = function () {
-      console.log('dataChannel.onopen');
-      var textRoom = document.getElementById('textRoom');
-      textRoom.style.display = "block";
-    };
-    
-    dataChannel.onclose = function () {
-      console.log("dataChannel.onclose");
-    };
-    
-    pc.textDataChannel = dataChannel;
+  //peer.addStream(localStream);
+  for (const track of localStream.getTracks()) {
+    peer.addTrack(track, localStream);
   }
   
-  return pc;
+  peer.ontrack = event => {
+    //console.log('onaddstream', event);
+    let video = document.createElement('video');
+    
+    video.id = "remoteView" + socketId;
+    
+    //console.log(event.streams);
+    
+    video.srcObject = event.streams[0];
+    video.muted = true;
+    //video.autoplay = true;
+    video.onloadedmetadata = async () => {
+      try {
+        await video.play();
+      } catch (error) {
+        logError(error);
+      }
+    };
+    
+    remoteViewContainer.appendChild(video);
+  };
+  
+  function createOffer() {
+    let callback = desc => {
+      
+      log('The SDP offer', desc.sdp);
+      
+      peer.setLocalDescription(desc)
+        .then(callback2)
+        .catch(logError);
+    };
+    let callback2 = () => {
+      
+      //log('setLocalDescription', peer.localDescription, 'table');
+      
+      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
+    };
+    peer.createOffer()
+      .then(callback)
+      .catch(logError);
+  }
+  
+  return peer;
 }
 
 function exchange(data) {
-  var fromId = data.from;
-  var pc;
+  let fromId = data.from;
+  
+  if (data.sdp) log('Exchange', data);
+  
+  let peer;
   if (fromId in pcPeers) {
-    pc = pcPeers[fromId];
+    peer = pcPeers[fromId];
   } else {
-    pc = createPC(fromId, false);
+    peer = createPC(fromId, false);
   }
   
   if (data.sdp) {
-    console.log('exchange sdp', data);
-    pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
-      if (pc.remoteDescription.type === "offer") {
-        pc.createAnswer(function (desc) {
-          console.log('createAnswer', desc);
-          pc.setLocalDescription(desc, function () {
-            console.log('setLocalDescription', pc.localDescription);
-            socket.emit('exchange', { 'to': fromId, 'sdp': pc.localDescription });
-          }, logError);
-        }, logError);
-      }
-    }, logError);
+    //console.log('exchange sdp', data);
+    let sdp = new RTCSessionDescription(data.sdp);
+    
+    let callback = () => peer.remoteDescription.type === "offer" ? peer.createAnswer().then(callback2).catch(logError) : null;
+    let callback2 = desc => peer.setLocalDescription(desc).then(callback3).catch(logError);
+    let callback3 = () => socket.emit('exchange', { 'to': fromId, 'sdp': peer.localDescription });
+    
+    peer.setRemoteDescription(sdp)
+      .then(callback)
+      .catch(logError);
   } else {
-    console.log('exchange candidate', data);
-    pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    //console.log('exchange candidate', data);
+    peer.addIceCandidate(new RTCIceCandidate(data.candidate))
+      .catch(logError);
   }
 }
 
 function leave(socketId) {
-  console.log('leave', socketId);
-  var pc = pcPeers[socketId];
-  pc.close();
+  //console.log('leave', socketId);
+  
+  const peer = pcPeers[socketId];
+  
+  peer.close();
+  
   delete pcPeers[socketId];
-  var video = document.getElementById("remoteView" + socketId);
+  
+  let video = document.getElementById("remoteView" + socketId);
+  
   if (video) video.remove();
 }
 
-socket.on('exchange', function (data) {
-  exchange(data);
-});
-socket.on('leave', function (socketId) {
-  leave(socketId);
-});
-
-socket.on('connect', function (data) {
-  console.log('connect');
-  getLocalStream();
-});
-
 function logError(error) {
-  console.log("logError", error);
+  console.log('\n\n%c START ________________________ Log Error ______________________', ' color: red; font-size: 15px');
+  //console.log(error + '\n\n');
+  console.log(error.toString() + '\n\n');
+  console.trace();
+  console.log('%c END __________________________ Log Error ______________________\n\n', 'color: red; font-size: 15px');
 }
 
-function press() {
-  var roomID = document.getElementById('roomID').value;
-  if (roomID === "") {
-    alert('Please enter room ID');
-  } else {
-    var roomIDContainer = document.getElementById('roomIDContainer');
-    roomIDContainer.parentElement.removeChild(roomIDContainer);
-    join(roomID);
-  }
-}
-
-function textRoomPress() {
-  var text = document.getElementById('textRoomInput').value;
-  if (text === "") {
-    alert('Enter something');
-  } else {
-    document.getElementById('textRoomInput').value = '';
-    var content = document.getElementById('textRoomContent');
-    content.innerHTML = content.innerHTML + '<p>' + 'Me' + ': ' + text + '</p>';
-    for (var key in pcPeers) {
-      var pc = pcPeers[key];
-      pc.textDataChannel.send(text);
+function log(log, value, type) {
+  let count = 60;
+  let i = 0;
+  let str = '';
+  let z = count - log.length;
+  
+  for (i; i <= z; i++) {
+    str += '_';
+    if (i === Math.floor(z / 2)) {
+      str += log;
     }
   }
+  console.log('%c' + str, 'font-size: 15px');
+  value !== undefined ? (type === 'table' ? console.table(value) : console.log(value)) : null;
+  console.log('\n\n');
 }

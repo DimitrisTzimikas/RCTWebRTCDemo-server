@@ -1,33 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>react-native-webrtc server</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/6.4.0/adapter.js"></script>-->
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 </head>
 <body>
-<div id="textRoom" style="display: none;">
-    <div id="textRoomContent">
-        <h3>Text Room</h3>
-    </div>
-    <input id="textRoomInput">
-    <button onclick="textRoomPress();">Send</button>
-</div>
 
 <video id="selfView" autoplay></video>
-
-<!--
-<video id="selfView2" autoplay></video>
--->
 
 <div id="remoteViewContainer"></div>
 
 <div id="roomIDContainer">
-    <input id="roomID" value="abc">
-    <button onclick="press();">Join/Create room</button>
+    <label for="roomID"></label><input id="roomID" value="abc">
+    <button onclick="onPress();">Join/Create room</button>
 </div>
 
 </body>
-<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript" src="/socket.io/socket.io.js"></script>
 <script type="text/javascript" src="main.js"></script>
 </html>
