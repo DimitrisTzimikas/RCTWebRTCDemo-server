@@ -4,7 +4,10 @@ const RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessi
 const configuration = { iceServers: [{ urls: "stun:stun.1.google.com:19302" }] };
 //const configuration = {sdpSemantics: 'unified-plan'};
 
-const selfView = document.getElementById("selfView");
+const localVideo = document.getElementById("localVideo");
+/*const remoteVideo = document.getElementById('remoteVideo');*/
+
+const p = document.querySelector("p");
 const remoteViewContainer = document.getElementById("remoteViewContainer");
 
 let pcPeers = {};
@@ -24,46 +27,45 @@ socket.on('leave', socketId => {
 });
 
 function getLocalStream() {
+  log('Get local Stream');
   const constrains = {
     "audio": false,
     "video": true,
   };
-  const callback = stream => {
+  const getStream = stream => {
     localStream = stream;
-    //window.mediaStream = stream;
-    selfView.srcObject = stream;
-    selfView.muted = true;
-    selfView.onloadedmetadata = async () => {
+    localVideo.srcObject = stream;
+    localVideo.muted = true;
+    localVideo.onloadedmetadata = async () => {
       try {
-        await selfView.play();
+        await localVideo.play();
       } catch (error) {
         logError(error);
       }
     };
     
+    // Check if browser is firefox
     if (navigator.userAgent.search("Firefox") === -1) {
       //log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
+      //log('Array with tracks', localStream.getTracks(), 'table');
     }
-    //log('Array with tracks', localStream.getTracks(), 'table');
   };
   
+  // Check codecs types
   /*console.log(window.RTCRtpSender.getCapabilities("video").codecs.map(e => e.name).indexOf("H264"));
    console.log(window.RTCRtpSender.getCapabilities("video"));
    console.log(window.RTCRtpSender.getCapabilities("audio"));*/
   
-  /*navigator.mediaDevices.getUserMedia = ( navigator.mediaDevices.getUserMedia ||
-   navigator.webkitGetUserMedia ||
-   navigator.mozGetUserMedia ||
-   navigator.msGetUserMedia);*/
-  
-  //navigator.mediaDevices.enumerateDevices().then(console.table);
+  // Get media devices
+  /*navigator.mediaDevices.enumerateDevices().then(console.table);*/
   
   navigator.mediaDevices.getUserMedia(constrains)
-    .then(callback)
+    .then(getStream)
     .catch(logError);
 }
 
 function onPress() {
+  log('You are entering the room');
   let roomID = document.getElementById('roomID').value;
   
   if (roomID === "") {
@@ -78,10 +80,10 @@ function onPress() {
 
 function join(roomID) {
   let onJoin = socketIds => {
-    //log('join', socketIds, 'table');
     for (const i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
         const socketId = socketIds[i];
+        log('Socket', socketId);
         createPC(socketId, true);
       }
     }
@@ -91,7 +93,7 @@ function join(roomID) {
 }
 
 function createPC(socketId, isOffer) {
-  
+  log('In Create PC');
   let peer = new RTCPeerConnection(configuration);
   
   //log('Peer', peer, 'table');
@@ -128,43 +130,63 @@ function createPC(socketId, isOffer) {
   };
   
   peer.oniceconnectionstatechange = event => {
-    //log('on ice connection state change', event);
-    
     if (peer.iceConnectionState === 'connected') {
-      //log('peer.iceConnectionState === "connected"');
-    }
-    if (peer.iceConnectionState === "connected") {
-      //log('peer.iceConnectionState === "connected"');
+      log('peer.iceConnectionState === "connected"', event);
     }
   };
   peer.onsignalingstatechange = event => {
-    //log('On signaling state change', event);
-    //console.log(peer.signalingState);
+    log('peer.onsignalingstatechange', event);
+    log('peer.signalingState', peer.signalingState);
   };
   
   //peer.addStream(localStream);
   for (const track of localStream.getTracks()) {
+    log('local streams', localStream.getTracks());
     peer.addTrack(track, localStream);
   }
   
   peer.ontrack = event => {
+    
+    let stream = event.stream;
+    
+    log('stream', stream);
+    /* if (stream.getAudioTracks().length) alert('Peer has audio stream.');
+     if (stream.getVideoTracks().length) alert('Peer has video stream.');*/
+    
     //console.log('onaddstream', event);
     let video = document.createElement('video');
-    
     video.id = "remoteView" + socketId;
     
-    //console.log(event.streams);
+    let isPlaying = video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2;
     
-    video.srcObject = event.streams[0];
-    video.muted = true;
-    //video.autoplay = true;
-    video.onloadedmetadata = async () => {
-      try {
-        await video.play();
-      } catch (error) {
-        logError(error);
+    // Check if video isn't playing
+    if (!isPlaying) {
+      // Doesn't duplicate same stream
+      if (video.srcObject !== event.streams[0]) {
+        video.srcObject = event.streams[0];
+        video.play();
       }
-    };
+    }
+    
+    /*video.srcObject = event.streams[0];
+     video.muted = false;
+     
+     video.autoplay = true;
+     video.onloadedmetadata = async () => {
+     try {
+     await video.play();
+     } catch (error) {
+     logError(error);
+     }
+     };*/
+    
+    // Console on site for webview debug
+    p.innerHTML += `<br> is stream active? ${event.streams[0].active}`;
+    p.innerHTML += `<br> stream id: ${event.streams[0].id}`;
+    console.log(event.streams);
+    
+    /*remoteVideo.srcObject = event.streams[0];
+     remoteVideo.play();*/
     
     remoteViewContainer.appendChild(video);
   };
@@ -172,7 +194,7 @@ function createPC(socketId, isOffer) {
   function createOffer() {
     let callback = desc => {
       
-      log('The SDP offer', desc.sdp);
+      //log('The SDP offer', desc.sdp);
       
       peer.setLocalDescription(desc)
         .then(callback2)
@@ -180,7 +202,7 @@ function createPC(socketId, isOffer) {
     };
     let callback2 = () => {
       
-      //log('setLocalDescription', peer.localDescription, 'table');
+      log('setLocalDescription', peer.localDescription);
       
       socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
     };

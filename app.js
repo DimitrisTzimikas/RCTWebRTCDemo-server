@@ -37,7 +37,7 @@ function listenCallback() {
 }
 
 function ioCallback(socket) {
-  console.log('connection');
+  console.log('ioCallback');
   
   const onDisconnect = () => {
     console.log('disconnect');
