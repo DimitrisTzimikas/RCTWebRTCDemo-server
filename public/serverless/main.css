@@ -1,0 +1,68 @@
+a:link {
+  text-decoration: none;
+  color: blue;
+}
+
+body {
+  font-size: 1em;
+  font-family: arial, helvetica, serif;
+  background-color: #fffada;
+}
+
+button {
+  background-color: #008cba;
+  border: 1px solid black;
+  color: white;
+  padding: 5px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+h1, h2 {
+  font-family: arial, helvetica, serif;
+}
+
+input {
+  padding: 5px 5px;
+  margin: 5px 0;
+  box-sizing: border-box;
+  border: 1px solid black;
+  border-radius: 4px;
+  background-color: white;
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+textarea {
+  margin-top: 5px
+}
+
+.messageContainer {
+  padding: 5px;
+  width: 800px;
+}
+
+.controlContainer {
+  padding: 5px;
+  width: 450px;
+  height: 28px;
+}
+
+.clear {
+  clear: left;
+}
+
+.videoContainer {
+  padding: 5px;
+  width: 800px;
+}
+
+.left {
+  float: left;
+  width: 300px;
+  padding: 10px;
+  text-align: center;
+}

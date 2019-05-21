@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+  <meta http-equiv="content-type" content="text/html;charset=UTF-8"/>
+  <head>
+    <title>Mobilefish.com - WebRTC without signaling server</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" href="main.css"/>
+    <script src="main.js" async></script>
+  </head>
+
+  <body>
+    <h1> WebRTC without signaling server</h1>
+    Usage:
+    <ul>
+      <li>Local and remote user both uses this web application.</li>
+      <li>The local user creates an offer by pressing button 'Create Offer'.</li>
+      <li>The local user copies the offer from input box A and send this to the remote user (e.g.: email).</li>
+      <li>The remote user paste this offer (Session Description Protocol) in input box B.</li>
+      <li>The remote user creates an answer by pressing button 'Answer'.</li>
+      <li>The remote user copies the answer from input box A and send this to the local user (e.g.: email).</li>
+      <li>The local user paste this answer in input box B and presses button 'Answer'.</li>
+      <li>A peer-to-peer connection is created between local and remote user browsers.</li>
+      <li>Only when the peer-to-peer connection is established you can use the Video, Chat or File Transfer functionalities.</li>
+      <li>Use Chrome browser if you want to see the console logging.</li>
+    </ul>
+    Local user (input box A)
+    <button id="createOfferButton">Create Offer</button> &nbsp;&nbsp;&nbsp;<button id="copyOfferButton">Copy</button>
+    <br/>
+    <label for="offerInput">offerInput:</label>
+    <textarea rows="10" cols="150" id="offerInput"></textarea>
+
+    <br/><br/>
+
+    Remote user (input box B)
+    <button id="answerButton">Answer</button> &nbsp;&nbsp;&nbsp;<button id="copyAnswerOfferButton">Copy</button>
+    <br/>
+    <label for="answerOfferInput">answerOfferInput</label>
+    <textarea id="answerOfferInput" rows="10" cols="150" placeholder="Paste remote Session Description Protocol (SDP)"></textarea>
+
+    <div class="controlContainer">
+      <button id="disconnectButton" name="disconnectButton" disabled>
+        Disconnect
+      </button>
+    </div>
+
+    <hr/>
+
+    <div class="videoContainer">
+      <h3>Video</h3>
+      <div class="clear"></div>
+      <div class="left">
+        Local User Screen<br/>
+        <video width="250" id="localVideo" autoplay></video>
+      </div>
+
+      <div class="left">
+        Remote User Screen<br/>
+        <video width="250" id="remoteVideo" autoplay></video>
+      </div>
+      <div class="clear"></div>
+    </div>
+
+    <hr/>
+
+    <div class="messageContainer">
+      <h3>Chat</h3>
+      Enter a message:
+      <button id="sendButton" name="sendButton" disabled>Send</button>
+      <br/>
+      <label for="message">message</label>
+      <textarea id="message" rows="10" cols="150" placeholder="Message text"></textarea>
+    </div>
+
+    <div class="messageContainer" id="receivebox" style="overflow:scroll;">
+      <p>Messages received:</p>
+    </div>
+
+    <hr/>
+
+    <div class="fileTransferContainer">
+      <h3>File transfer</h3>
+      Upload and send a file:
+      <button id="sendFileButton" name="sendFileButton">send</button>
+      <br/>
+      <input type="file" name="fileTransfer" id="fileTransfer">
+      <br/><br/>
+      File upload progress: <br/>
+      <progress value="0" id="sendFileProg"></progress>
+      <br/><br/>
+      Receive file progress: <br/>
+      <progress value="0" id="recFileProg"></progress>
+      <a href="javascript:void(null);" id="fileDownload"></a>
+    </div>
+
+  </body>
+</html>
