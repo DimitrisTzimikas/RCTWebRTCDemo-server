@@ -17,13 +17,17 @@ if (process.env.LOCAL) {
 }
 const io = require('socket.io')(server);
 
-//Middleware
+/* ==============================
+ Middleware
+ ================================ */
 app.use(express.static(__dirname + '/public'));
 app.get('/', getCallback);
-server.listen(serverPort, listenCallback);
 io.on('connection', ioCallback);
+server.listen(serverPort, listenCallback);
 
-// Functions
+/* ==============================
+ Middleware Functions
+ ================================ */
 function getCallback(req, res) {
   console.log('get /');
   res.sendFile(__dirname + '/index.html');
@@ -37,9 +41,28 @@ function listenCallback() {
 }
 
 function ioCallback(socket) {
-  console.log('ioCallback');
+  console.log(`Socket id: ${socket.id}`);
   
-  const onDisconnect = () => {
+  socket.on('join', (roomID, callback) => {
+    console.log('join', roomID);
+    
+    let socketIds = socketIdsInRoom(roomID);
+    console.log(socketIds);
+    
+    callback(socketIds);
+    socket.join(roomID);
+    socket.room = roomID;
+  });
+  
+  socket.on('exchange', data => {
+    console.log('exchange', data.to);
+    
+    data.from = socket.id;
+    let to = io.sockets.connected[data.to];
+    to.emit('exchange', data);
+  });
+  
+  socket.on('disconnect', () => {
     console.log('disconnect');
     
     if (socket.room) {
@@ -49,30 +72,14 @@ function ioCallback(socket) {
       
       console.log('leave');
     }
-  };
-  const onJoin = (name, callback) => {
-    console.log('join', name);
-    
-    let socketIds = socketIdsInRoom(name);
-    callback(socketIds);
-    socket.join(name);
-    socket.room = name;
-  };
-  const onExchange = data => {
-    //console.log('exchange', data);
-    
-    data.from = socket.id;
-    let to = io.sockets.connected[data.to];
-    to.emit('exchange', data);
-  };
-  
-  socket.on('disconnect', onDisconnect);
-  socket.on('join', onJoin);
-  socket.on('exchange', onExchange);
+  });
 }
 
-function socketIdsInRoom(name) {
-  let socketIds = io.nsps['/'].adapter.rooms[name];
+/* ==============================
+ Socket Functions
+ ================================ */
+function socketIdsInRoom(roomID) {
+  let socketIds = io.nsps['/'].adapter.rooms[roomID];
   if (socketIds) {
     let collection = [];
     for (let key in socketIds) {
