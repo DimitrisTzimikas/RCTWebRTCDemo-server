@@ -56,7 +56,7 @@ function onPress() {
   let roomID = document.getElementById('roomID').value;
   
   if (roomID === "") {
-    alert('Please enter room ID');
+    alert('Please enter room ID!');
   } else {
     let roomIDContainer = document.getElementById('roomIDContainer');
     roomIDContainer.parentElement.removeChild(roomIDContainer);
