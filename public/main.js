@@ -141,11 +141,11 @@ function createPC(socketId, isOffer) {
       // Doesn't duplicate same stream
       if (video.srcObject !== event.streams[0]) {
         video.srcObject = event.streams[0];
-        localVideo.onloadedmetadata = async () => {
+        /*localVideo.onloadedmetadata = async () => {
           try {
             await video.play();
           } catch (e) {logError(e);}
-        };
+        };*/
       }
     }
     
