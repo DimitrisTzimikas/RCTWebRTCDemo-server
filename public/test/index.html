@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+    <base target="_blank">
+    <title>Peer connection</title>
+    <link rel="stylesheet" href="main.css"/>
+</head>
+
+<body>
+
+<div id="container">
+
+    <video id="localVideo" playsinline autoplay muted></video>
+    <video id="remoteVideo" playsinline autoplay></video>
+
+    <div class="box">
+        <button id="startButton">Start</button>
+        <button id="callButton">Call</button>
+        <button id="hangupButton">Hang Up</button>
+    </div>
+
+    <div class="box">
+        <span>SDP Semantics:</span>
+        <select id="sdpSemantics">
+            <option selected value="">Default</option>
+            <option value="unified-plan">Unified Plan</option>
+            <option value="plan-b">Plan B</option>
+        </select>
+    </div>
+
+    <p>Console:</p>
+</div>
+
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+<script src="main.js" async></script>
+
+</body>
+</html>

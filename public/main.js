@@ -1,69 +1,58 @@
+/* ==============================
+ Global Variables
+ ================================ */
 const socket = io();
-const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection || window.msRTCPeerConnection;
-const RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.webkitRTCSessionDescription || window.msRTCSessionDescription;
-const configuration = { iceServers: [{ urls: "stun:stun.1.google.com:19302" }] };
-//const configuration = {sdpSemantics: 'unified-plan'};
+const configuration = {
+  iceServers: [
+    { urls: "stun:stun.1.google.com:19302" },
+    /*{ 'urls': 'stun:stun1.l.google.com:19302' },
+     { 'urls': 'stun:stun2.l.google.com:19302' },
+     { 'urls': 'stun:stun3.l.google.com:19302' },
+     { 'urls': 'stun:stun4.l.google.com:19302' },*/
+  ],
+};
 
-const selfView = document.getElementById("selfView");
+const constrains = {
+  "audio": false,
+  "video": true,
+};
+
+const p = document.querySelector("p");
+const localVideo = document.getElementById("localVideo");
 const remoteViewContainer = document.getElementById("remoteViewContainer");
 
 let pcPeers = {};
 let localStream;
 
-socket.on('connect', () => {
-  //log('socket connected');
-  getLocalStream();
-});
-socket.on('exchange', data => {
-  //log('socket exchange data');
-  exchange(data);
-});
-socket.on('leave', socketId => {
-  //log('socket left');
-  leave(socketId);
-});
+/* ==============================
+ Socket Functionality
+ ================================ */
+socket.on('connect', async () => await getLocalStream());
+socket.on('exchange', data => exchange(data));
+socket.on('leave', socketId => leave(socketId));
 
-function getLocalStream() {
-  const constrains = {
-    "audio": false,
-    "video": true,
-  };
-  const callback = stream => {
-    localStream = stream;
-    //window.mediaStream = stream;
-    selfView.srcObject = stream;
-    selfView.muted = true;
-    selfView.onloadedmetadata = async () => {
-      try {
-        await selfView.play();
-      } catch (error) {
-        logError(error);
-      }
-    };
+/* ==============================
+ Functions
+ ================================ */
+async function getLocalStream() {
+  console.log('get local stream');
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(constrains);
     
-    if (navigator.userAgent.search("Firefox") === -1) {
-      //log('Video Codecs', window.RTCRtpSender.getCapabilities("video").codecs, 'table');
-    }
-    //log('Array with tracks', localStream.getTracks(), 'table');
-  };
-  
-  /*console.log(window.RTCRtpSender.getCapabilities("video").codecs.map(e => e.name).indexOf("H264"));
-   console.log(window.RTCRtpSender.getCapabilities("video"));
-   console.log(window.RTCRtpSender.getCapabilities("audio"));*/
-  
-  /*navigator.mediaDevices.getUserMedia = ( navigator.mediaDevices.getUserMedia ||
-   navigator.webkitGetUserMedia ||
-   navigator.mozGetUserMedia ||
-   navigator.msGetUserMedia);*/
-  
-  //navigator.mediaDevices.enumerateDevices().then(console.table);
-  
-  navigator.mediaDevices.getUserMedia(constrains)
-    .then(callback)
-    .catch(logError);
+    localStream = stream;
+    localVideo.srcObject = stream;
+    localVideo.muted = true;
+    localVideo.onloadedmetadata = async () => {
+      try {
+        await localVideo.play();
+      } catch (e) {logError(e);}
+    };
+  } catch (e) {logError(e);}
 }
 
 function onPress() {
+  console.log('you press the button');
   let roomID = document.getElementById('roomID').value;
   
   if (roomID === "") {
@@ -78,10 +67,10 @@ function onPress() {
 
 function join(roomID) {
   let onJoin = socketIds => {
-    //log('join', socketIds, 'table');
     for (const i in socketIds) {
       if (socketIds.hasOwnProperty(i)) {
         const socketId = socketIds[i];
+        console.log('Socket', socketId);
         createPC(socketId, true);
       }
     }
@@ -91,134 +80,127 @@ function join(roomID) {
 }
 
 function createPC(socketId, isOffer) {
-  
-  let peer = new RTCPeerConnection(configuration);
-  
-  //log('Peer', peer, 'table');
-  
-  log('Peer', peer);
+  const pc = new RTCPeerConnection(configuration);
+  console.log('create pc');
   
   pcPeers = {
     ...pcPeers,
-    [socketId]: peer,
+    [socketId]: pc,
   };
   
-  peer.onicecandidate = event => {
-    //log('On Ice Candidate', event, 'table');
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  
+  pc.onicecandidate = event => {
+    console.log('onicecandidate');
     
     if (event.candidate) {
       socket.emit('exchange', { 'to': socketId, 'candidate': event.candidate });
     }
   };
   
-  peer.onnegotiationneeded = () => {
-    //log('on negotiation needed');
-    
-    /*peer.createOffer()
-     .then(function (offer) {
-     peer.setLocalDescription(offer)
-     .then(() => socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription }))
-     .catch(logError);
-     })
-     .catch(logError);*/
+  pc.onnegotiationneeded = async () => {
+    console.log('onnegotiationneeded');
     
     if (isOffer) {
-      createOffer();
+      try {
+        const description = await pc.createOffer();
+        await pc.setLocalDescription(description);
+        
+        socket.emit('exchange', { 'to': socketId, 'sdp': pc.localDescription });
+      } catch (e) {logError(e);}
+      
     }
   };
   
-  peer.oniceconnectionstatechange = event => {
-    //log('on ice connection state change', event);
-    
-    if (peer.iceConnectionState === 'connected') {
-      //log('peer.iceConnectionState === "connected"');
-    }
-    if (peer.iceConnectionState === "connected") {
-      //log('peer.iceConnectionState === "connected"');
+  pc.oniceconnectionstatechange = event => {
+    console.log('oniceconnectionstatechange');
+    if (pc.iceConnectionState === 'connected') {
+      console.log('connected', event);
     }
   };
-  peer.onsignalingstatechange = event => {
-    //log('On signaling state change', event);
-    //console.log(peer.signalingState);
+  
+  pc.onsignalingstatechange = event => {
+    console.log('onsignalingstatechange', event);
+    console.log('signalingState', pc.signalingState);
   };
   
-  //peer.addStream(localStream);
-  for (const track of localStream.getTracks()) {
-    peer.addTrack(track, localStream);
-  }
-  
-  peer.ontrack = event => {
-    //console.log('onaddstream', event);
+  pc.ontrack = event => {
     let video = document.createElement('video');
-    
     video.id = "remoteView" + socketId;
     
-    //console.log(event.streams);
+    video.autoplay = true;
+    video.loop = true;
+    video.playsinline = true;
+    video.load();
+    video.controls = true;
     
-    video.srcObject = event.streams[0];
-    video.muted = true;
-    //video.autoplay = true;
-    video.onloadedmetadata = async () => {
-      try {
-        await video.play();
-      } catch (error) {
-        logError(error);
+    let isPlaying = video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2;
+    
+    // Check if video isn't playing
+    if (!isPlaying) {
+      // Doesn't duplicate same stream
+      if (video.srcObject !== event.streams[0]) {
+        video.srcObject = event.streams[0];
+        /*localVideo.onloadedmetadata = async () => {
+          try {
+            await video.play();
+          } catch (e) {logError(e);}
+        };*/
       }
-    };
+    }
     
-    remoteViewContainer.appendChild(video);
+    // Console on site for webview debug
+    p.innerHTML += `<br> is stream active? ${event.streams[0].active}`;
+    p.innerHTML += `<br> stream id: ${event.streams[0].id}`;
+    console.log(event.streams);
+    
+    playVideo(video);
   };
   
-  function createOffer() {
-    let callback = desc => {
-      
-      log('The SDP offer', desc.sdp);
-      
-      peer.setLocalDescription(desc)
-        .then(callback2)
-        .catch(logError);
-    };
-    let callback2 = () => {
-      
-      //log('setLocalDescription', peer.localDescription, 'table');
-      
-      socket.emit('exchange', { 'to': socketId, 'sdp': peer.localDescription });
-    };
-    peer.createOffer()
-      .then(callback)
-      .catch(logError);
-  }
-  
-  return peer;
+  return pc;
 }
 
-function exchange(data) {
+function playVideo(video) {
+  remoteViewContainer.appendChild(video);
+  p.innerHTML += `<br> asdf`;
+  setTimeout(() => video.play(), 3000);
+}
+
+async function exchange(data) {
+  let pc;
   let fromId = data.from;
   
-  if (data.sdp) log('Exchange', data);
-  
-  let peer;
   if (fromId in pcPeers) {
-    peer = pcPeers[fromId];
+    pc = pcPeers[fromId];
   } else {
-    peer = createPC(fromId, false);
+    pc = createPC(fromId, false);
   }
   
   if (data.sdp) {
-    //console.log('exchange sdp', data);
-    let sdp = new RTCSessionDescription(data.sdp);
+    const remoteOffer = new RTCSessionDescription(data.sdp);
     
-    let callback = () => peer.remoteDescription.type === "offer" ? peer.createAnswer().then(callback2).catch(logError) : null;
-    let callback2 = desc => peer.setLocalDescription(desc).then(callback3).catch(logError);
-    let callback3 = () => socket.emit('exchange', { 'to': fromId, 'sdp': peer.localDescription });
+    console.log('exchange sdp', data);
+    console.log('remoteOffer:\n', remoteOffer);
     
-    peer.setRemoteDescription(sdp)
-      .then(callback)
-      .catch(logError);
+    try {
+      await pc.setRemoteDescription(remoteOffer);
+      console.log('setRemoteDescription ok');
+      
+      if (pc.remoteDescription.type === "offer") {
+        const description = await pc.createAnswer();
+        await pc.setLocalDescription(description);
+        
+        console.log('createAnswer:\n', description);
+        socket.emit('exchange', { 'to': fromId, 'sdp': pc.localDescription });
+      }
+    } catch (e) {console.log(e);}
+    
   } else {
-    //console.log('exchange candidate', data);
-    peer.addIceCandidate(new RTCIceCandidate(data.candidate))
-      .catch(logError);
+    console.log('exchange candidate', data);
+    
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    } catch (e) {logError(e);}
   }
 }
 
@@ -242,21 +224,4 @@ function logError(error) {
   console.log(error.toString() + '\n\n');
   console.trace();
   console.log('%c END __________________________ Log Error ______________________\n\n', 'color: red; font-size: 15px');
-}
-
-function log(log, value, type) {
-  let count = 60;
-  let i = 0;
-  let str = '';
-  let z = count - log.length;
-  
-  for (i; i <= z; i++) {
-    str += '_';
-    if (i === Math.floor(z / 2)) {
-      str += log;
-    }
-  }
-  console.log('%c' + str, 'font-size: 15px');
-  value !== undefined ? (type === 'table' ? console.table(value) : console.log(value)) : null;
-  console.log('\n\n');
 }

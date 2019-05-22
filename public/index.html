@@ -1,23 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <title>react-native-webrtc server</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/6.4.0/adapter.js"></script>-->
-    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-</head>
-<body>
+    <!--<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>-->
+    <script src="https://webrtchacks.github.io/adapter/adapter-latest.js"></script>
+    <link rel="stylesheet" type="text/css" href="main.css">
+  </head>
+  <body>
 
-<video id="selfView" autoplay></video>
+    <div class="split left">
+      <div id="roomIDContainer">
+        <label for="roomID"></label><input id="roomID" value="abc">
+        <button onclick="onPress();">Join/Create room</button>
+      </div>
 
-<div id="remoteViewContainer"></div>
+      <a href="https://96cbc6b2.ngrok.io">https://96cbc6b2.ngrok.io</a>
+      <br>
+      <p>Console:</p>
 
-<div id="roomIDContainer">
-    <label for="roomID"></label><input id="roomID" value="abc">
-    <button onclick="onPress();">Join/Create room</button>
-</div>
+      <div id="remoteViewContainer"></div>
+    </div>
 
-</body>
-<script type="text/javascript" src="/socket.io/socket.io.js"></script>
-<script type="text/javascript" src="main.js"></script>
+
+    <div class="split right">
+      <video id="localVideo" autoplay></video>
+      <!--<video id="remoteVideo" playsinline autoplay></video>-->
+
+    </div>
+
+
+  </body>
+  <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript" src="main.js"></script>
 </html>
